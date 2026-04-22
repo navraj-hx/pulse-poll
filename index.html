@@ -184,16 +184,13 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.6rem;
-    margin-left: 86px;
     font-weight: 600;
   }
-
-  .presenter-grid .x-label { margin-left: 96px; }
 
   /* ─── Grid rows ─── */
   .grid-header, .grid-row {
     display: grid;
-    grid-template-columns: 86px repeat(3, 1fr);
+    grid-template-columns: 86px repeat(3, 1fr) 86px;
     gap: 5px;
     margin-bottom: 5px;
   }
@@ -240,16 +237,22 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  .cell-num,
+  .cell-num {
+    font-size: 2.25rem;
+    color: var(--hx-lt1);
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1;
+    pointer-events: none;
+  }
+
   .heat-num {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    font-size: 0.72rem;
+    font-size: 1rem;
     color: var(--hx-lt1);
     font-weight: 500;
     letter-spacing: 0;
     line-height: 1;
+    opacity: 0.75;
     pointer-events: none;
   }
 
@@ -362,7 +365,7 @@
   /* ─── Presenter mode ─── */
   .presenter-grid .grid-header,
   .presenter-grid .grid-row {
-    grid-template-columns: 96px repeat(3, 1fr);
+    grid-template-columns: 96px repeat(3, 1fr) 96px;
     gap: 6px;
     margin-bottom: 6px;
   }
@@ -393,41 +396,43 @@
     .grid-header, .grid-row,
     .presenter-grid .grid-header,
     .presenter-grid .grid-row {
-      grid-template-columns: 74px repeat(3, 1fr);
+      grid-template-columns: 54px repeat(3, 1fr) 54px;
       gap: 4px;
       margin-bottom: 4px;
     }
 
     .x-label,
-    .presenter-grid .x-label { margin-left: 78px; font-size: 0.65rem; }
+    .presenter-grid .x-label { font-size: 0.65rem; }
 
     .y-label { font-size: 0.65rem; }
 
-    .col-label { font-size: 0.62rem; padding: 0 0.1rem 0.4rem; }
-    .row-label { font-size: 0.62rem; padding: 0 0.15rem; }
+    .col-label { font-size: 0.6rem; padding: 0 0.05rem 0.4rem; }
+    .row-label { font-size: 0.6rem; padding: 0 0.1rem; }
 
     .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.65rem; }
+    .presenter-grid .row-label { font-size: 0.62rem; }
 
     .cell-btn { border-radius: 8px; font-size: 1.1rem; }
+    .cell-num { font-size: 1.8rem; }
     .heat-cell { border-radius: 10px; aspect-ratio: 1; }
     .heat-count { font-size: 1.5rem; }
     .heat-pct { font-size: 0.7rem; }
+    .heat-num { font-size: 0.85rem; }
   }
 
   @media (max-width: 360px) {
     .grid-header, .grid-row,
     .presenter-grid .grid-header,
     .presenter-grid .grid-row {
-      grid-template-columns: 64px repeat(3, 1fr);
+      grid-template-columns: 48px repeat(3, 1fr) 48px;
     }
 
     .x-label,
-    .presenter-grid .x-label { margin-left: 68px; font-size: 0.6rem; }
+    .presenter-grid .x-label { font-size: 0.6rem; }
 
-    .col-label, .row-label { font-size: 0.56rem; }
+    .col-label, .row-label { font-size: 0.54rem; }
     .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.58rem; }
+    .presenter-grid .row-label { font-size: 0.56rem; }
   }
 
   /* ─── View-state gating (presenter / voter / voted / auth) ─── */
@@ -624,6 +629,7 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
+          <div></div>
         </div>
         <div id="vote-grid"></div>
       </div>
@@ -650,6 +656,7 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
+          <div></div>
         </div>
         <div id="results-grid"></div>
       </div>
@@ -681,6 +688,7 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
+          <div></div>
         </div>
         <div id="present-grid"></div>
       </div>
@@ -700,10 +708,6 @@
       <p>Scan to vote</p>
       <div id="qr-code"></div>
       <div class="qr-url" id="qr-url"></div>
-    </div>
-
-    <div class="reset-area">
-      <button class="reset-btn" onclick="resetVotes()">Reset all votes</button>
     </div>
   </div>
 </div>
@@ -865,6 +869,7 @@ function renderVoteGrid() {
 
       row.appendChild(btn);
     }
+    row.appendChild(document.createElement('div'));
     container.appendChild(row);
   }
 
@@ -921,6 +926,7 @@ function renderHeatGrid(containerId) {
 
       row.appendChild(cell);
     }
+    row.appendChild(document.createElement('div'));
     container.appendChild(row);
   }
 }
