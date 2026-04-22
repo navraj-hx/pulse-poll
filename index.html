@@ -184,13 +184,16 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 0.6rem;
+    margin-left: 86px;
     font-weight: 600;
   }
+
+  .presenter-grid .x-label { margin-left: 96px; }
 
   /* ─── Grid rows ─── */
   .grid-header, .grid-row {
     display: grid;
-    grid-template-columns: 86px repeat(3, 1fr) 86px;
+    grid-template-columns: 86px repeat(3, 1fr);
     gap: 5px;
     margin-bottom: 5px;
   }
@@ -309,29 +312,6 @@
     border-radius: 3px;
   }
 
-  /* ─── Reset ─── */
-  .reset-area { text-align: center; margin-top: 2rem; }
-
-  .reset-btn {
-    padding: 0.6rem 1.3rem;
-    border: 1px solid rgba(238, 108, 90, 0.4);
-    border-radius: 8px;
-    background: rgba(238, 108, 90, 0.1);
-    color: var(--hx-coral);
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    font-family: inherit;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    transition: all 0.2s;
-  }
-
-  .reset-btn:hover {
-    background: rgba(238, 108, 90, 0.18);
-    border-color: var(--hx-coral);
-  }
-
   /* ─── QR section ─── */
   .qr-section {
     text-align: center;
@@ -365,7 +345,7 @@
   /* ─── Presenter mode ─── */
   .presenter-grid .grid-header,
   .presenter-grid .grid-row {
-    grid-template-columns: 96px repeat(3, 1fr) 96px;
+    grid-template-columns: 96px repeat(3, 1fr);
     gap: 6px;
     margin-bottom: 6px;
   }
@@ -396,43 +376,43 @@
     .grid-header, .grid-row,
     .presenter-grid .grid-header,
     .presenter-grid .grid-row {
-      grid-template-columns: 54px repeat(3, 1fr) 54px;
+      grid-template-columns: 74px repeat(3, 1fr);
       gap: 4px;
       margin-bottom: 4px;
     }
 
     .x-label,
-    .presenter-grid .x-label { font-size: 0.65rem; }
+    .presenter-grid .x-label { margin-left: 78px; font-size: 0.65rem; }
 
     .y-label { font-size: 0.65rem; }
 
-    .col-label { font-size: 0.6rem; padding: 0 0.05rem 0.4rem; }
-    .row-label { font-size: 0.6rem; padding: 0 0.1rem; }
+    .col-label { font-size: 0.62rem; padding: 0 0.1rem 0.4rem; }
+    .row-label { font-size: 0.62rem; padding: 0 0.15rem; }
 
     .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.62rem; }
+    .presenter-grid .row-label { font-size: 0.65rem; }
 
     .cell-btn { border-radius: 8px; font-size: 1.1rem; }
-    .cell-num { font-size: 1.8rem; }
+    .cell-num { font-size: 1.9rem; }
     .heat-cell { border-radius: 10px; aspect-ratio: 1; }
     .heat-count { font-size: 1.5rem; }
     .heat-pct { font-size: 0.7rem; }
-    .heat-num { font-size: 0.85rem; }
+    .heat-num { font-size: 0.9rem; }
   }
 
   @media (max-width: 360px) {
     .grid-header, .grid-row,
     .presenter-grid .grid-header,
     .presenter-grid .grid-row {
-      grid-template-columns: 48px repeat(3, 1fr) 48px;
+      grid-template-columns: 64px repeat(3, 1fr);
     }
 
     .x-label,
-    .presenter-grid .x-label { font-size: 0.6rem; }
+    .presenter-grid .x-label { margin-left: 68px; font-size: 0.6rem; }
 
-    .col-label, .row-label { font-size: 0.54rem; }
+    .col-label, .row-label { font-size: 0.56rem; }
     .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.56rem; }
+    .presenter-grid .row-label { font-size: 0.58rem; }
   }
 
   /* ─── View-state gating (presenter / voter / voted / auth) ─── */
@@ -604,7 +584,7 @@
 
   <!-- Header -->
   <div class="header">
-    <h1>AI Pulse Check</h1>
+    <h1>How do you feel about AI</h1>
     <div class="vote-count" id="vote-count">0 votes</div>
   </div>
 
@@ -629,7 +609,6 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
-          <div></div>
         </div>
         <div id="vote-grid"></div>
       </div>
@@ -656,7 +635,6 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
-          <div></div>
         </div>
         <div id="results-grid"></div>
       </div>
@@ -671,10 +649,6 @@
       <div class="legend-swatch" style="background:var(--heat-4)"></div>
       <span>High</span>
     </div>
-
-    <div class="reset-area">
-      <button class="reset-btn" onclick="resetVotes()">Reset all votes</button>
-    </div>
   </div>
 
   <!-- Presenter view (same as results + QR) -->
@@ -688,7 +662,6 @@
           <div class="col-label">Gone down</div>
           <div class="col-label">Stayed the same</div>
           <div class="col-label">Gone up</div>
-          <div></div>
         </div>
         <div id="present-grid"></div>
       </div>
@@ -786,19 +759,6 @@ async function castVote(cell) {
   }
 }
 
-async function resetVotes() {
-  if (!confirm('Reset all votes? This cannot be undone.')) return;
-  try {
-    // Delete all rows (filter that matches everything)
-    await supaFetch(`${TABLE}?id=not.is.null`, { method: 'DELETE' });
-    localStorage.removeItem('ai-pulse-voted');
-    votedCell = null;
-    await fetchVotes();
-  } catch (err) {
-    console.error('Reset failed:', err);
-  }
-}
-
 // ─── Realtime via polling (simple, no WS dependency) ───
 setInterval(() => {
   if (isPresenter && !isAuthed) return;
@@ -869,7 +829,6 @@ function renderVoteGrid() {
 
       row.appendChild(btn);
     }
-    row.appendChild(document.createElement('div'));
     container.appendChild(row);
   }
 
@@ -926,7 +885,6 @@ function renderHeatGrid(containerId) {
 
       row.appendChild(cell);
     }
-    row.appendChild(document.createElement('div'));
     container.appendChild(row);
   }
 }
