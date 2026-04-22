@@ -290,36 +290,6 @@
   .heat-count { font-size: 1.9rem; font-weight: 700; line-height: 1; }
   .heat-pct { font-size: 0.75rem; font-weight: 500; opacity: 0.8; }
 
-  /* ─── Axes lines (Results view only) ─── */
-  #results-grid { position: relative; }
-
-  #results-grid::before,
-  #results-grid::after {
-    content: '';
-    position: absolute;
-    background: var(--hx-dk1);
-    pointer-events: none;
-    z-index: 10;
-  }
-
-  #results-grid::before {
-    /* Horizontal axis: runs across the middle row of data cells */
-    left: 91px;
-    right: 0;
-    top: 50%;
-    height: 2px;
-    transform: translateY(-50%);
-  }
-
-  #results-grid::after {
-    /* Vertical axis: runs down the middle column of data cells */
-    top: 0;
-    bottom: 0;
-    left: calc(50% + 45.5px);
-    width: 2px;
-    transform: translateX(-50%);
-  }
-
   /* ─── Legend ─── */
   .legend {
     display: flex;
@@ -406,9 +376,6 @@
     .heat-count { font-size: 1.5rem; }
     .heat-pct { font-size: 0.7rem; }
     .heat-num { font-size: 0.9rem; }
-
-    #results-grid::before { left: 78px; }
-    #results-grid::after { left: calc(50% + 39px); }
   }
 
   @media (max-width: 360px) {
@@ -419,9 +386,6 @@
     .x-label { margin-left: 68px; font-size: 0.6rem; }
 
     .col-label, .row-label { font-size: 0.56rem; }
-
-    #results-grid::before { left: 68px; }
-    #results-grid::after { left: calc(50% + 34px); }
   }
 
   /* ─── View-state gating (presenter / voter / voted / auth) ─── */
