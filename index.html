@@ -221,6 +221,7 @@
 
   /* ─── Vote cells ─── */
   .cell-btn {
+    position: relative;
     aspect-ratio: 1;
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -237,6 +238,19 @@
     justify-content: center;
     gap: 0.1rem;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .cell-num,
+  .heat-num {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 0.72rem;
+    color: var(--hx-lt1);
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1;
+    pointer-events: none;
   }
 
   .cell-btn:not(.disabled):hover,
@@ -260,6 +274,7 @@
 
   /* ─── Heatmap cells (results view) ─── */
   .heat-cell {
+    position: relative;
     aspect-ratio: 1.15;
     border-radius: 12px;
     display: flex;
@@ -826,6 +841,7 @@ function renderVoteGrid() {
 
     for (const b of [0, 1, 2]) {
       const key = `b${b}_d${d}`;
+      const num = d * 3 + b + 1;
       const btn = document.createElement('button');
       btn.className = 'cell-btn';
 
@@ -835,11 +851,13 @@ function renderVoteGrid() {
       if (isSelected) btn.classList.add('selected');
       if (hasVoted && !isSelected) btn.classList.add('disabled');
 
+      let inner = `<span class="cell-num">${num}</span>`;
       if (isSelected) {
-        btn.innerHTML = `<span class="cell-check">✓</span><span class="cell-count">${votes[key] || 0}</span>`;
+        inner += `<span class="cell-check">✓</span><span class="cell-count">${votes[key] || 0}</span>`;
       } else if (hasVoted) {
-        btn.innerHTML = `<span class="cell-count">${votes[key] || 0}</span>`;
+        inner += `<span class="cell-count">${votes[key] || 0}</span>`;
       }
+      btn.innerHTML = inner;
 
       if (!hasVoted) {
         btn.addEventListener('click', () => castVote(key));
@@ -878,6 +896,7 @@ function renderHeatGrid(containerId) {
 
     for (const b of [0, 1, 2]) {
       const key = `b${b}_d${d}`;
+      const num = d * 3 + b + 1;
       const count = votes[key] || 0;
       const pct = total > 0 ? Math.round((count / total) * 100) : 0;
       const bg = heatColor(count);
@@ -891,7 +910,11 @@ function renderHeatGrid(containerId) {
         ? `0 0 ${Math.min(count * 3, 25)}px rgba(89,187,182,${Math.min(count * 0.06, 0.35)})`
         : 'none';
 
+      // Number stays readable on every ramp step: muted grey on pale cells,
+      // white with opacity on the darker teal cells.
+      const numColor = (count / maxCount()) > 0.5 ? 'rgba(255,255,255,0.85)' : 'var(--hx-lt1)';
       cell.innerHTML = `
+        <span class="heat-num" style="color:${numColor}">${num}</span>
         <span class="heat-count" style="color:${fg}">${count}</span>
         <span class="heat-pct" style="color:${fg}">${pct}%</span>
       `;
