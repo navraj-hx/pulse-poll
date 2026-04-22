@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI Pulse Check</title>
+<script>
+  // Anti-flash gate: set view state on <html> before body parses.
+  // States: auth (presenter URL, not authed), presenter, voted, voter
+  (function() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var isPresenter = params.get('mode') === 'present';
+      var isAuthed = sessionStorage.getItem('hx-pulse-auth') === 'yes';
+      var hasVoted = !!localStorage.getItem('ai-pulse-voted');
+      var view;
+      if (isPresenter) view = isAuthed ? 'presenter' : 'auth';
+      else view = hasVoted ? 'voted' : 'voter';
+      document.documentElement.dataset.view = view;
+    } catch (e) {
+      document.documentElement.dataset.view = 'voter';
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    /* hx theme tokens */
+    --hx-dk1: #1C2733;
+    --hx-lt1: #848D9A;
+    --hx-dk2: #01514F;
+    --hx-lt2: #F5F5F5;
+    --hx-teal: #59BBB6;
+    --hx-blue: #4D6FF8;
+    --hx-light-blue: #A6C3ED;
+    --hx-coral: #EE6C5A;
+    --hx-maroon: #3F0A20;
+    --hx-purple: #BCA0E7;
+
+    /* UI tokens — light mode */
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-hover: rgba(89, 187, 182, 0.06);
+    --border: #DDE1E6;
+    --border-strong: #CED4DB;
+    --text: var(--hx-dk1);
+    --text-muted: var(--hx-dk1);
+    --accent: var(--hx-teal);
+    --accent-dark: #01514F;
+    --accent-glow: rgba(89, 187, 182, 0.22);
+    --voted-green: var(--hx-teal);
+
+    /* Heatmap ramp — light mode, teal-based */
+    --heat-0: #F5F5F5;
+    --heat-1: #E5F3F1;
+    --heat-2: #BFE3E0;
+    --heat-3: #8CD0CC;
+    --heat-4: #59BBB6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  /* ─── Header ─── */
+  .header { text-align: center; margin-bottom: 1.25rem; }
+
+  .header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--hx-teal), var(--hx-blue), var(--hx-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .vote-count {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.35rem;
+    font-weight: 400;
+  }
+
+  /* ─── Mode toggle ─── */
+  .mode-toggle {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 1.5rem;
+    background: #F0F2F5;
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 0.6rem 0.75rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.2s;
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(89, 187, 182, 0.3);
+  }
+
+  /* ─── Status banner ─── */
+  .status-banner {
+    text-align: center;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .status-banner.voted {
+    background: rgba(89, 187, 182, 0.1);
+    border: 1px solid rgba(89, 187, 182, 0.35);
+    color: var(--accent-dark);
+  }
+
+  .status-banner.prompt {
+    color: var(--text-muted);
+    font-weight: 300;
+    padding: 0;
+    margin-bottom: 1rem;
+  }
+
+  /* ─── Grid wrapper ─── */
+  .grid-wrapper {
+    position: relative;
+    padding: 0 1.25rem;
+  }
+
+  .y-label {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .grid-inner { margin-left: 0; }
+
+  .x-label {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+    margin-left: 86px;
+    font-weight: 600;
+  }
+
+  .presenter-grid .x-label { margin-left: 96px; }
+
+  /* ─── Grid rows ─── */
+  .grid-header, .grid-row {
+    display: grid;
+    grid-template-columns: 86px repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .grid-header { margin-bottom: 2px; }
+
+  .col-label, .row-label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .col-label { text-align: center; padding: 0 0.2rem 0.5rem; }
+
+  .row-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.25rem;
+    text-align: center;
+  }
+
+  /* ─── Vote cells ─── */
+  .cell-btn {
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+    color: var(--text);
+    font-size: 1.3rem;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cell-btn:not(.disabled):hover,
+  .cell-btn:not(.disabled):active {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    box-shadow: 0 0 15px var(--accent-glow);
+  }
+
+  .cell-btn.disabled { cursor: default; opacity: 0.5; }
+  .cell-btn.selected {
+    border: 2px solid var(--voted-green);
+    background: rgba(89, 187, 182, 0.1);
+    box-shadow: 0 0 18px rgba(89, 187, 182, 0.2);
+    opacity: 1 !important;
+    color: var(--accent-dark);
+  }
+
+  .cell-check { font-size: 0.9rem; }
+  .cell-count { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+  /* ─── Heatmap cells (results view) ─── */
+  .heat-cell {
+    aspect-ratio: 1.15;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    transition: all 0.5s ease;
+    border: 1px solid var(--border);
+  }
+
+  .heat-count { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+  .heat-pct { font-size: 0.75rem; font-weight: 500; opacity: 0.8; }
+
+  /* ─── Legend ─── */
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 1.5rem;
+  }
+
+  .legend span { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+  .legend-swatch {
+    width: 22px;
+    height: 9px;
+    border-radius: 3px;
+  }
+
+  /* ─── Reset ─── */
+  .reset-area { text-align: center; margin-top: 2rem; }
+
+  .reset-btn {
+    padding: 0.6rem 1.3rem;
+    border: 1px solid rgba(238, 108, 90, 0.4);
+    border-radius: 8px;
+    background: rgba(238, 108, 90, 0.1);
+    color: var(--hx-coral);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover {
+    background: rgba(238, 108, 90, 0.18);
+    border-color: var(--hx-coral);
+  }
+
+  /* ─── QR section ─── */
+  .qr-section {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .qr-section p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.85rem;
+    font-weight: 500;
+  }
+
+  #qr-code {
+    display: inline-block;
+    padding: 12px;
+    background: #fff;
+    border-radius: 10px;
+  }
+
+  .qr-url {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.6rem;
+    word-break: break-all;
+    opacity: 0.75;
+  }
+
+  /* ─── Presenter mode ─── */
+  .presenter-grid .grid-header,
+  .presenter-grid .grid-row {
+    grid-template-columns: 96px repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .presenter-grid .col-label,
+  .presenter-grid .row-label { font-size: 0.75rem; }
+
+  /* ─── Loading ─── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    font-size: 1rem;
+    color: var(--text-muted);
+  }
+
+  .hidden { display: none; }
+
+  /* ─── Mobile ─── */
+  @media (max-width: 480px) {
+    .container { padding: 1.25rem 0.75rem; }
+
+    .mode-toggle { max-width: none; }
+
+    .grid-wrapper { padding: 0 1rem; }
+
+    .grid-header, .grid-row,
+    .presenter-grid .grid-header,
+    .presenter-grid .grid-row {
+      grid-template-columns: 74px repeat(3, 1fr);
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .x-label,
+    .presenter-grid .x-label { margin-left: 78px; font-size: 0.65rem; }
+
+    .y-label { font-size: 0.65rem; }
+
+    .col-label { font-size: 0.62rem; padding: 0 0.1rem 0.4rem; }
+    .row-label { font-size: 0.62rem; padding: 0 0.15rem; }
+
+    .presenter-grid .col-label,
+    .presenter-grid .row-label { font-size: 0.65rem; }
+
+    .cell-btn { border-radius: 8px; font-size: 1.1rem; }
+    .heat-cell { border-radius: 10px; aspect-ratio: 1; }
+    .heat-count { font-size: 1.5rem; }
+    .heat-pct { font-size: 0.7rem; }
+  }
+
+  @media (max-width: 360px) {
+    .grid-header, .grid-row,
+    .presenter-grid .grid-header,
+    .presenter-grid .grid-row {
+      grid-template-columns: 64px repeat(3, 1fr);
+    }
+
+    .x-label,
+    .presenter-grid .x-label { margin-left: 68px; font-size: 0.6rem; }
+
+    .col-label, .row-label { font-size: 0.56rem; }
+    .presenter-grid .col-label,
+    .presenter-grid .row-label { font-size: 0.58rem; }
+  }
+
+  /* ─── View-state gating (presenter / voter / voted / auth) ─── */
+  #password-prompt { display: none; }
+  #view-thanks { display: none; }
+
+  /* Mode toggle and header vote-count only for presenter */
+  html:not([data-view="presenter"]) .mode-toggle,
+  html:not([data-view="presenter"]) #vote-count { display: none; }
+
+  /* Results / present views fully gated off for non-presenters */
+  html:not([data-view="presenter"]) #view-results,
+  html:not([data-view="presenter"]) #view-present { display: none !important; }
+
+  /* Voter who has voted: swap grid for thanks panel */
+  html[data-view="voted"] #view-vote { display: none; }
+  html[data-view="voted"] #view-thanks { display: block; }
+
+  /* Auth gate: show only the password prompt */
+  html[data-view="auth"] .header,
+  html[data-view="auth"] #view-vote,
+  html[data-view="auth"] #view-thanks { display: none; }
+  html[data-view="auth"] #password-prompt { display: flex; }
+
+  /* ─── Password prompt ─── */
+  #password-prompt {
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0 1rem;
+  }
+
+  .pw-card {
+    width: 100%;
+    max-width: 360px;
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(28, 39, 51, 0.04);
+  }
+
+  .pw-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, var(--hx-teal), var(--hx-blue), var(--hx-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .pw-subtitle {
+    color: var(--hx-lt1);
+    font-size: 0.7rem;
+    margin: 0.4rem 0 1.25rem;
+    font-weight: 400;
+  }
+
+  #pw-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  #pw-input {
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: var(--hx-dk1);
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+    text-align: center;
+    letter-spacing: 0.04em;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  #pw-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  #pw-form button {
+    padding: 0.7rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+  }
+
+  #pw-form button:hover { filter: brightness(1.08); }
+  #pw-form button:active { transform: scale(0.98); }
+
+  .pw-error {
+    color: var(--hx-coral);
+    font-size: 0.7rem;
+    margin-top: 0.75rem;
+    min-height: 1rem;
+    font-weight: 500;
+  }
+
+  /* ─── Thanks panel (post-vote voter) ─── */
+  .thanks-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+    margin-top: 0.5rem;
+    box-shadow: 0 2px 12px rgba(28, 39, 51, 0.04);
+  }
+
+  .thanks-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(89, 187, 182, 0.12);
+    color: var(--hx-teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 1rem;
+    font-weight: 700;
+  }
+
+  .thanks-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--hx-dk1);
+    margin-bottom: 0.6rem;
+  }
+
+  .thanks-count {
+    color: var(--hx-lt1);
+    font-size: 0.75rem;
+  }
+
+  #thanks-total {
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Password gate (presenter URL only) -->
+  <div id="password-prompt">
+    <div class="pw-card">
+      <h2 class="pw-title">Presenter access</h2>
+      <p class="pw-subtitle">Enter the passcode to continue</p>
+      <form id="pw-form" autocomplete="off">
+        <input type="password" id="pw-input" autocomplete="off" placeholder="Passcode" aria-label="Passcode" />
+        <button type="submit">Unlock</button>
+      </form>
+      <div class="pw-error" id="pw-error" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>AI Pulse Check</h1>
+    <div class="vote-count" id="vote-count">0 votes</div>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-vote" onclick="setMode('vote')">Vote</button>
+    <button class="mode-btn" id="btn-results" onclick="setMode('results')">Results</button>
+    <button class="mode-btn" id="btn-present" onclick="setMode('present')">Present</button>
+  </div>
+
+  <!-- Vote view -->
+  <div id="view-vote">
+    <div class="status-banner prompt" id="vote-prompt">Tap the cell that describes you</div>
+    <div class="status-banner voted hidden" id="vote-confirmed">✓ Vote recorded</div>
+
+    <div class="grid-wrapper">
+      <div class="y-label">Desire to embrace AI →</div>
+      <div class="grid-inner">
+        <div class="x-label">Belief in AI capabilities →</div>
+        <div class="grid-header">
+          <div></div>
+          <div class="col-label">Gone down</div>
+          <div class="col-label">Stayed the same</div>
+          <div class="col-label">Gone up</div>
+        </div>
+        <div id="vote-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thanks view (voter post-vote) -->
+  <div id="view-thanks">
+    <div class="thanks-card">
+      <div class="thanks-icon">✓</div>
+      <div class="thanks-title">Thanks! Your vote has been recorded</div>
+      <div class="thanks-count"><span id="thanks-total">0</span> votes so far</div>
+    </div>
+  </div>
+
+  <!-- Results view -->
+  <div id="view-results" class="hidden">
+    <div class="grid-wrapper">
+      <div class="y-label">Desire to embrace AI →</div>
+      <div class="grid-inner presenter-grid">
+        <div class="x-label">Belief in AI capabilities →</div>
+        <div class="grid-header">
+          <div></div>
+          <div class="col-label">Gone down</div>
+          <div class="col-label">Stayed the same</div>
+          <div class="col-label">Gone up</div>
+        </div>
+        <div id="results-grid"></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span>Low</span>
+      <div class="legend-swatch" style="background:var(--heat-0)"></div>
+      <div class="legend-swatch" style="background:var(--heat-1)"></div>
+      <div class="legend-swatch" style="background:var(--heat-2)"></div>
+      <div class="legend-swatch" style="background:var(--heat-3)"></div>
+      <div class="legend-swatch" style="background:var(--heat-4)"></div>
+      <span>High</span>
+    </div>
+
+    <div class="reset-area">
+      <button class="reset-btn" onclick="resetVotes()">Reset all votes</button>
+    </div>
+  </div>
+
+  <!-- Presenter view (same as results + QR) -->
+  <div id="view-present" class="hidden">
+    <div class="grid-wrapper">
+      <div class="y-label">Desire to embrace AI →</div>
+      <div class="grid-inner presenter-grid">
+        <div class="x-label">Belief in AI capabilities →</div>
+        <div class="grid-header">
+          <div></div>
+          <div class="col-label">Gone down</div>
+          <div class="col-label">Stayed the same</div>
+          <div class="col-label">Gone up</div>
+        </div>
+        <div id="present-grid"></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span>Low</span>
+      <div class="legend-swatch" style="background:var(--heat-0)"></div>
+      <div class="legend-swatch" style="background:var(--heat-1)"></div>
+      <div class="legend-swatch" style="background:var(--heat-2)"></div>
+      <div class="legend-swatch" style="background:var(--heat-3)"></div>
+      <div class="legend-swatch" style="background:var(--heat-4)"></div>
+      <span>High</span>
+    </div>
+
+    <div class="qr-section">
+      <p>Scan to vote</p>
+      <div id="qr-code"></div>
+      <div class="qr-url" id="qr-url"></div>
+    </div>
+
+    <div class="reset-area">
+      <button class="reset-btn" onclick="resetVotes()">Reset all votes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Config ───
+const SUPABASE_URL = 'https://usyvtrzyqcawwpsrmxuc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FAekpE6YMIOD2uiYpPQGTw_fs0lI57g';
+const TABLE = 'votes';
+
+const BELIEF = ['Gone down', 'Stayed the same', 'Gone up'];
+const DESIRE = ['Gone down', 'Stayed the same', 'Gone up'];
+
+const PRESENTER_PASSWORD = 'hxpulse2026';
+
+// Cell key format: b{0-2}_d{0-2}
+// b = belief index (0=down, 1=same, 2=up)
+// d = desire index (0=down, 1=same, 2=up)
+
+let votes = {};
+let currentMode = 'vote';
+let votedCell = localStorage.getItem('ai-pulse-voted');
+
+const urlParams = new URLSearchParams(window.location.search);
+const isPresenter = urlParams.get('mode') === 'present';
+let isAuthed = sessionStorage.getItem('hx-pulse-auth') === 'yes';
+
+// ─── Supabase REST helpers ───
+async function supaFetch(path, opts = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': opts.prefer || '',
+    ...opts.headers
+  };
+  const res = await fetch(url, { ...opts, headers });
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function fetchVotes() {
+  try {
+    const rows = await supaFetch(`${TABLE}?select=cell`);
+    const counts = {};
+    for (let b = 0; b < 3; b++)
+      for (let d = 0; d < 3; d++)
+        counts[`b${b}_d${d}`] = 0;
+    rows.forEach(r => {
+      if (counts.hasOwnProperty(r.cell)) counts[r.cell]++;
+    });
+    votes = counts;
+    renderAll();
+  } catch (err) {
+    console.error('Failed to fetch votes:', err);
+  }
+}
+
+async function castVote(cell) {
+  if (votedCell) return;
+  try {
+    await supaFetch(TABLE, {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ cell })
+    });
+    votedCell = cell;
+    localStorage.setItem('ai-pulse-voted', cell);
+    if (!isPresenter) document.documentElement.dataset.view = 'voted';
+    await fetchVotes();
+  } catch (err) {
+    console.error('Vote failed:', err);
+    alert('Vote failed — please try again.');
+  }
+}
+
+async function resetVotes() {
+  if (!confirm('Reset all votes? This cannot be undone.')) return;
+  try {
+    // Delete all rows (filter that matches everything)
+    await supaFetch(`${TABLE}?id=not.is.null`, { method: 'DELETE' });
+    localStorage.removeItem('ai-pulse-voted');
+    votedCell = null;
+    await fetchVotes();
+  } catch (err) {
+    console.error('Reset failed:', err);
+  }
+}
+
+// ─── Realtime via polling (simple, no WS dependency) ───
+setInterval(() => {
+  if (isPresenter && !isAuthed) return;
+  fetchVotes();
+}, 3000);
+
+// ─── Rendering ───
+function totalVotes() {
+  return Object.values(votes).reduce((s, v) => s + v, 0);
+}
+
+function maxCount() {
+  return Math.max(1, ...Object.values(votes));
+}
+
+function heatColor(count) {
+  const max = maxCount();
+  if (count === 0) return 'var(--heat-0)';
+  const r = count / max;
+  if (r < 0.25) return 'var(--heat-1)';
+  if (r < 0.5) return 'var(--heat-2)';
+  if (r < 0.75) return 'var(--heat-3)';
+  return 'var(--heat-4)';
+}
+
+function heatTextColor(count) {
+  const max = maxCount();
+  return (count / max) > 0.5 ? '#fff' : '#1C2733';
+}
+
+function renderVoteGrid() {
+  const container = document.getElementById('vote-grid');
+  container.innerHTML = '';
+
+  // Rows: desire 2 (up) at top, desire 0 (down) at bottom
+  for (const d of [2, 1, 0]) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+
+    const label = document.createElement('div');
+    label.className = 'row-label';
+    label.textContent = DESIRE[d];
+    row.appendChild(label);
+
+    for (const b of [0, 1, 2]) {
+      const key = `b${b}_d${d}`;
+      const btn = document.createElement('button');
+      btn.className = 'cell-btn';
+
+      const isSelected = votedCell === key;
+      const hasVoted = !!votedCell;
+
+      if (isSelected) btn.classList.add('selected');
+      if (hasVoted && !isSelected) btn.classList.add('disabled');
+
+      if (isSelected) {
+        btn.innerHTML = `<span class="cell-check">✓</span><span class="cell-count">${votes[key] || 0}</span>`;
+      } else if (hasVoted) {
+        btn.innerHTML = `<span class="cell-count">${votes[key] || 0}</span>`;
+      }
+
+      if (!hasVoted) {
+        btn.addEventListener('click', () => castVote(key));
+      }
+
+      row.appendChild(btn);
+    }
+    container.appendChild(row);
+  }
+
+  // Update status
+  const prompt = document.getElementById('vote-prompt');
+  const confirmed = document.getElementById('vote-confirmed');
+  if (votedCell) {
+    prompt.classList.add('hidden');
+    confirmed.classList.remove('hidden');
+  } else {
+    prompt.classList.remove('hidden');
+    confirmed.classList.add('hidden');
+  }
+}
+
+function renderHeatGrid(containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const total = totalVotes();
+
+  for (const d of [2, 1, 0]) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+
+    const label = document.createElement('div');
+    label.className = 'row-label';
+    label.textContent = DESIRE[d];
+    row.appendChild(label);
+
+    for (const b of [0, 1, 2]) {
+      const key = `b${b}_d${d}`;
+      const count = votes[key] || 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const bg = heatColor(count);
+      const fg = heatTextColor(count);
+
+      const cell = document.createElement('div');
+      cell.className = 'heat-cell';
+      cell.style.background = bg;
+      cell.style.borderColor = count > 0 ? 'rgba(89,187,182,0.4)' : '';
+      cell.style.boxShadow = count > 0
+        ? `0 0 ${Math.min(count * 3, 25)}px rgba(89,187,182,${Math.min(count * 0.06, 0.35)})`
+        : 'none';
+
+      cell.innerHTML = `
+        <span class="heat-count" style="color:${fg}">${count}</span>
+        <span class="heat-pct" style="color:${fg}">${pct}%</span>
+      `;
+
+      row.appendChild(cell);
+    }
+    container.appendChild(row);
+  }
+}
+
+function renderAll() {
+  const total = totalVotes();
+  document.getElementById('vote-count').textContent = `${total} vote${total !== 1 ? 's' : ''}`;
+  const thanksEl = document.getElementById('thanks-total');
+  if (thanksEl) thanksEl.textContent = total;
+  renderVoteGrid();
+  renderHeatGrid('results-grid');
+  renderHeatGrid('present-grid');
+}
+
+function setMode(mode) {
+  if (!isPresenter || !isAuthed) return;
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-${mode}`).classList.add('active');
+
+  document.getElementById('view-vote').classList.toggle('hidden', mode !== 'vote');
+  document.getElementById('view-results').classList.toggle('hidden', mode !== 'results');
+  document.getElementById('view-present').classList.toggle('hidden', mode !== 'present');
+}
+
+// ─── QR Code ───
+function renderQR() {
+  // Voter URL = base (no ?mode=present), so scanned links land on the voter experience.
+  const url = `${window.location.origin}${window.location.pathname}`;
+  const qrEl = document.getElementById('qr-code');
+  const urlEl = document.getElementById('qr-url');
+  urlEl.textContent = url;
+  qrEl.innerHTML = '';
+  try {
+    new QRCode(qrEl, {
+      text: url,
+      width: 160,
+      height: 160,
+      colorDark: '#1C2733',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    qrEl.textContent = 'QR generation failed — share the URL directly.';
+  }
+}
+
+// ─── Password gate ───
+function handlePasswordSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('pw-input');
+  const error = document.getElementById('pw-error');
+  if (input.value === PRESENTER_PASSWORD) {
+    sessionStorage.setItem('hx-pulse-auth', 'yes');
+    isAuthed = true;
+    error.textContent = '';
+    document.documentElement.dataset.view = 'presenter';
+    startApp();
+  } else {
+    error.textContent = 'Incorrect passcode. Try again.';
+    input.value = '';
+    input.focus();
+  }
+}
+
+function startApp() {
+  fetchVotes();
+  if (isPresenter) renderQR();
+}
+
+// ─── Init ───
+document.getElementById('pw-form').addEventListener('submit', handlePasswordSubmit);
+
+if (isPresenter && !isAuthed) {
+  setTimeout(() => document.getElementById('pw-input').focus(), 30);
+} else {
+  startApp();
+}
+</script>
+</body>
+</html>
