@@ -185,8 +185,6 @@
     font-weight: 600;
   }
 
-  .presenter-grid .x-label { margin-left: 96px; }
-
   /* ─── Grid rows ─── */
   .grid-header, .grid-row {
     display: grid;
@@ -278,8 +276,8 @@
   /* ─── Heatmap cells (results view) ─── */
   .heat-cell {
     position: relative;
-    aspect-ratio: 1.15;
-    border-radius: 12px;
+    aspect-ratio: 1;
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -339,17 +337,6 @@
     opacity: 0.75;
   }
 
-  /* ─── Presenter mode ─── */
-  .presenter-grid .grid-header,
-  .presenter-grid .grid-row {
-    grid-template-columns: 96px repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-
-  .presenter-grid .col-label,
-  .presenter-grid .row-label { font-size: 0.75rem; }
-
   /* ─── Loading ─── */
   .loading {
     display: flex;
@@ -370,46 +357,35 @@
 
     .grid-wrapper { padding: 0 1rem; }
 
-    .grid-header, .grid-row,
-    .presenter-grid .grid-header,
-    .presenter-grid .grid-row {
+    .grid-header, .grid-row {
       grid-template-columns: 74px repeat(3, 1fr);
       gap: 4px;
       margin-bottom: 4px;
     }
 
-    .x-label,
-    .presenter-grid .x-label { margin-left: 78px; font-size: 0.65rem; }
+    .x-label { margin-left: 78px; font-size: 0.65rem; }
 
     .y-label { font-size: 0.65rem; }
 
     .col-label { font-size: 0.62rem; padding: 0 0.1rem 0.4rem; }
     .row-label { font-size: 0.62rem; padding: 0 0.15rem; }
 
-    .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.65rem; }
-
     .cell-btn { border-radius: 8px; font-size: 1.1rem; }
     .cell-num { font-size: 1.9rem; }
-    .heat-cell { border-radius: 10px; aspect-ratio: 1; }
+    .heat-cell { border-radius: 8px; }
     .heat-count { font-size: 1.5rem; }
     .heat-pct { font-size: 0.7rem; }
     .heat-num { font-size: 0.9rem; }
   }
 
   @media (max-width: 360px) {
-    .grid-header, .grid-row,
-    .presenter-grid .grid-header,
-    .presenter-grid .grid-row {
+    .grid-header, .grid-row {
       grid-template-columns: 64px repeat(3, 1fr);
     }
 
-    .x-label,
-    .presenter-grid .x-label { margin-left: 68px; font-size: 0.6rem; }
+    .x-label { margin-left: 68px; font-size: 0.6rem; }
 
     .col-label, .row-label { font-size: 0.56rem; }
-    .presenter-grid .col-label,
-    .presenter-grid .row-label { font-size: 0.58rem; }
   }
 
   /* ─── View-state gating (presenter / voter / voted / auth) ─── */
@@ -625,7 +601,7 @@
   <div id="view-results" class="hidden">
     <div class="grid-wrapper">
       <div class="y-label">Desire to embrace AI →</div>
-      <div class="grid-inner presenter-grid">
+      <div class="grid-inner">
         <div class="x-label">Belief in AI capabilities →</div>
         <div class="grid-header">
           <div></div>
@@ -652,7 +628,7 @@
   <div id="view-present" class="hidden">
     <div class="grid-wrapper">
       <div class="y-label">Desire to embrace AI →</div>
-      <div class="grid-inner presenter-grid">
+      <div class="grid-inner">
         <div class="x-label">Belief in AI capabilities →</div>
         <div class="grid-header">
           <div></div>
